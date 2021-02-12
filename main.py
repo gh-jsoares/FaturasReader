@@ -69,7 +69,8 @@ def initializeGoogleApi():
             with open('token.pickle', 'wb') as token:
                 pickle.dump(creds, token)
 
-        service = build('calendar', 'v3', credentials=creds)
+        service = build('calendar', 'v3', credentials=creds,
+                        cache_discovery=False)
     except:
         sys.exit("An error occurred with the Google Calendar API")
 
@@ -175,11 +176,10 @@ def main():
         infos.append(extractEventInfoFromFaturaInfo("Gold", e))
         infos.append(extractEventInfoFromFaturaInfoLeitura("Gold", e))
 
-    #service = initializeGoogleApi()
+    service = initializeGoogleApi()
     for i in infos:
-        print(i)
-        #result = createEvent(service, i["title"], i["description"], i["start"])
-        #print("Created event for {} at {}".format(i["title"], result))
+        result = createEvent(service, i["title"], i["description"], i["start"])
+        print("Created event for {} at {}".format(i["title"], result))
 
     todayDir = datetime.datetime.now().strftime("%Y-%m-%d")
     if not os.path.exists(todayDir):
