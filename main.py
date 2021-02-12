@@ -106,13 +106,16 @@ def extractEpal(path):
 
 def extractEdp(path):
     lines = readPdf(path, -1)
-    index = lines.index("Data limite de pagamento:") + 1
-    ent = lines[index].strip()
-    ref = lines[index + 1].strip()
-    mon = lines[index + 2].strip()
-    date = lines[index + 3].strip()
-    date = "".join([c if c.isalnum() else "-" for c in date])
-    return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date}
+    try:
+        index = lines.index("Data limite de pagamento:") + 1
+        ent = lines[index].strip()
+        ref = lines[index + 1].strip()
+        mon = lines[index + 2].strip()
+        date = lines[index + 3].strip()
+        date = "".join([c if c.isalnum() else "-" for c in date])
+        return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date}
+    except expression as identifier:
+        sys.exit("EDP FATURA ERRO! IMPRIMIR EM PDF")
 
 
 def extractEventInfoFromFaturaInfo(company, info):
