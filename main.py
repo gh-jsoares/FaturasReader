@@ -81,6 +81,10 @@ def readPdf(path, page=0):
     return list(filter(lambda x: x.strip() != '', slate.PDF(file)[page].split("\n")))
 
 
+def parseTime(time):
+    return datetime.datetime.strptime(time, "%d-%m-%Y")
+
+
 def extractGold(path):
     lines = readPdf(path)
     ref_index = lines.index("REFERÊNCIA") - 1
@@ -89,7 +93,12 @@ def extractGold(path):
     mon = lines[lines.index("MONTANTE", ref_index) - 1].strip()
     date = lines[-2].strip()
     date = "".join([c if c.isalnum() else "-" for c in date])
-    return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date}
+
+    def last_day_of_month(any_day):
+        next_month = any_day.replace(day=28) + datetime.timedelta(days=4)
+        return next_month - datetime.timedelta(days=next_month.day)
+    leitura = last_day_of_month(parseTime(date)).strftime("%d-%m-%Y")
+    return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date, 'PRÓXIMA LEITURA': leitura}
 
 
 def extractEpal(path):
@@ -98,10 +107,15 @@ def extractEpal(path):
     ent = lines[index].strip()
     ref = lines[index + 1].strip()
     mon = lines[index + 2].strip()
-    date = lines[lines.index("DATA LIMITE DE PAGAMENTO") + 1]
-    date = "-".join(reversed("".join([c if c.isalnum()
-                                      else "-" for c in date]).split('-')))
-    return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date}
+
+    def fixDate(date):
+        return "-".join(reversed("".join([c if c.isalnum()
+                                          else "-" for c in date]).split('-')))
+
+    date = fixDate(lines[lines.index("DATA LIMITE DE PAGAMENTO") + 1])
+    leitura = fixDate(list(filter(lambda x: x.find(
+        "Comunicação de leituras") != -1, lines))[0].split(" ")[-1])
+    return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date, 'PRÓXIMA LEITURA': leitura}
 
 
 def extractEdp(path):
@@ -113,7 +127,8 @@ def extractEdp(path):
         mon = lines[index + 2].strip()
         date = lines[index + 3].strip()
         date = "".join([c if c.isalnum() else "-" for c in date])
-        return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date}
+        leitura = '22-' + '-'.join(date.split('-')[1:])
+        return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date, 'PRÓXIMA LEITURA': leitura}
     except:
         sys.exit("EDP FATURA ERRO! IMPRIMIR EM PDF")
 
@@ -123,7 +138,15 @@ def extractEventInfoFromFaturaInfo(company, info):
     description = ''
     for k in info:
         description += k + ": " + info[k] + "\n"
-    start = datetime.datetime.strptime(info['DATA LIMITE'], "%d-%m-%Y")
+    start = parseTime(info['DATA LIMITE'])
+    leitura = parseTime(info['PRÓXIMA LEITURA'])
+    return {'title': title, 'description': description, 'start': start}
+
+
+def extractEventInfoFromFaturaInfoLeitura(company, info):
+    title = 'Leitura ' + company
+    description = ''
+    start = parseTime(info['PRÓXIMA LEITURA'])
     return {'title': title, 'description': description, 'start': start}
 
 
@@ -144,16 +167,19 @@ def main():
     infos = []
     for e in edps:
         infos.append(extractEventInfoFromFaturaInfo("EDP", e))
+        infos.append(extractEventInfoFromFaturaInfoLeitura("EDP", e))
     for e in epals:
         infos.append(extractEventInfoFromFaturaInfo("EPAL", e))
+        infos.append(extractEventInfoFromFaturaInfoLeitura("EPAL", e))
     for e in golds:
         infos.append(extractEventInfoFromFaturaInfo("Gold", e))
+        infos.append(extractEventInfoFromFaturaInfoLeitura("Gold", e))
 
-    service = initializeGoogleApi()
+    #service = initializeGoogleApi()
     for i in infos:
-        # result = createEvent(service, i["title"], i["description"], i["start"])
-        # print("Created event for {} at {}".format(i["title"], result))
-        pass
+        print(i)
+        #result = createEvent(service, i["title"], i["description"], i["start"])
+        #print("Created event for {} at {}".format(i["title"], result))
 
     todayDir = datetime.datetime.now().strftime("%Y-%m-%d")
     if not os.path.exists(todayDir):
