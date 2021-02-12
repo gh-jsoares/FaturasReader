@@ -114,7 +114,7 @@ def extractEdp(path):
         date = lines[index + 3].strip()
         date = "".join([c if c.isalnum() else "-" for c in date])
         return {'REFERÊNCIA': ref, 'ENTIDADE': ent, 'MONTANTE': mon, 'DATA LIMITE': date}
-    except expression as identifier:
+    except:
         sys.exit("EDP FATURA ERRO! IMPRIMIR EM PDF")
 
 
